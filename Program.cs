@@ -23,6 +23,10 @@ app.Configure(config =>
         .WithDescription("Validates changeLog.yml config file")
         .WithExample(new[] { "validate", "-f", "changeLog.yml" });
 
+    config.AddCommand<DiffCommand>("diff")
+        .WithDescription("Diff")
+        .WithExample(new[] { "diff" });
+
     config.AddCommand<TestCommand>("test")
         .WithDescription("Test")
         .WithExample(new[] { "test" });

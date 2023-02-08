@@ -5,11 +5,9 @@ namespace ChangeLog.Data;
 
 public static class Db
 {
-    public static async Task<List<MetaDTO>> GetMeta(Builder builder)
+    private static string GetMetaQuery()
     {
-        using var connection = builder.GetConnection();
-        var results = await connection.QueryAsync<MetaDTO>(
-            @"
+        return @"
                 SELECT 
                     ROUTINE_SCHEMA [Schema],
                     SPECIFIC_NAME [Name],
@@ -21,8 +19,20 @@ public static class Db
                 WHERE o.type IN ('P', 'FN', 'IF', 'TF')
                 AND SPECIFIC_NAME NOT LIKE 'sp_MS%'
                 ORDER BY o.object_id
-            ");
+            ";
+    }
 
+    public static async Task<List<MetaDTO>> GetMeta(Builder builder)
+    {
+        using var connection = builder.GetConnection();
+        var results = await connection.QueryAsync<MetaDTO>(GetMetaQuery());
+        return results.ToList();
+    }
+
+    public static async Task<List<MetaDTO>> GetSourceMeta(Builder builder)
+    {
+        using var connection = builder.GetSourceConnection();
+        var results = await connection.QueryAsync<MetaDTO>(GetMetaQuery());
         return results.ToList();
     }
 }

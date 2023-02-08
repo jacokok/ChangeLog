@@ -2,6 +2,6 @@ namespace ChangeLog.Classes;
 
 public class Config
 {
-    public string Prefix { get; set; } = "";
-    public string ConnectionString { get; set; } = default!;
+    public string ConnectionString { get; set; } = "";
+    public string SourceConnectionString { get; set; } = "";
 }

@@ -21,7 +21,33 @@ public class Builder
         _config = Yaml.GetDeserializer().Deserialize<Config>(fileText);
     }
 
+    public Builder(string connectionString, string sourceConnectionString)
+    {
+        _config = (new()
+        {
+            ConnectionString = connectionString,
+            SourceConnectionString = sourceConnectionString
+        });
+    }
+
     public bool Validate()
+    {
+        return ValidateInput();
+    }
+
+    public bool ValidateAll()
+    {
+        if (ValidateInput())
+        {
+            return HasValidDbConnection();
+        }
+        else
+        {
+            return false;
+        }
+    }
+
+    private bool ValidateInput()
     {
         ConfigValidator validator = new();
         FluentValidation.Results.ValidationResult result = validator.Validate(_config);
@@ -29,16 +55,19 @@ public class Builder
         {
             AnsiConsole.MarkupLine($"[red]{error.ErrorMessage}[/]");
         }
-        AnsiConsole.MarkupLine($"Connection String: [green]{_config.ConnectionString}[/]");
-        bool dbValid = HasValidDbConnection();
-        return result.IsValid && dbValid;
+        return result.IsValid;
     }
 
     public IDbConnection GetConnection()
     {
         return new SqlConnection(_config.ConnectionString);
     }
-    public bool Connect()
+    public IDbConnection GetSourceConnection()
+    {
+        return new SqlConnection(_config.SourceConnectionString);
+    }
+
+    private bool Connect()
     {
         var connection = new SqlConnection(_config.ConnectionString);
         connection.Open();
@@ -48,7 +77,7 @@ public class Builder
         return result;
     }
 
-    public bool HasValidDbConnection()
+    private bool HasValidDbConnection()
     {
         bool result = false;
         AnsiConsole.Status()
