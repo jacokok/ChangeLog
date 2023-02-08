@@ -1,2 +1,0 @@
-prefix: procs
-connectionString: Data Source=localhost;Initial Catalog=Test;UID=Test;PWD=Admin12345;Max Pool Size=1;Min Pool Size=1;Pooling=True;TrustServerCertificate=True;
