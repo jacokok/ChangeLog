@@ -22,7 +22,7 @@ public class GenerateCommand : AsyncCommand<GenerateCommand.Settings>
     public override async Task<int> ExecuteAsync([NotNull] CommandContext context, [NotNull] Settings settings)
     {
         Builder builder = new(settings.File);
-        var metaResults = await Data.Db.GetMeta(builder);
+        var metaResults = await Data.Db.GetMeta(builder, false);
         var meta = metaResults.Where(x => x.Type.Equals("P") && x.Definition.Length > 0).ToList();
 
         AnsiConsole.MarkupLine($"Generating count: [green]{meta.Count}[/]");

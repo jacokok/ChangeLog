@@ -1,9 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
-using System.Text;
 using ChangeLog.Classes;
-using ChangeLog.Liquibase;
-using ChangeLog.Liquibase.ChangeTypes;
-using ChangeLog.Utils;
+using ChangeLog.Data;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -20,6 +17,9 @@ public class DiffCommand : AsyncCommand<DiffCommand.Settings>
 
         [CommandOption("-f|--file")]
         public string File { get; set; } = "changeLog.yml";
+
+        [CommandOption("-t|--type")]
+        public string? Type { get; set; }
     }
 
     public override async Task<int> ExecuteAsync([NotNull] CommandContext context, [NotNull] Settings settings)
@@ -33,19 +33,23 @@ public class DiffCommand : AsyncCommand<DiffCommand.Settings>
 
         var destination = await AnsiConsole
             .Status()
-            .StartAsync("Getting destination meta...", _ => Data.Db.GetMeta(builder));
+            .StartAsync("Getting destination meta...", _ => Data.Db.GetAllObjectsAndTable(builder, false));
+
+        destination = (settings.Type != null) ? destination.Where(x => x.Type.Equals(settings.Type)).ToList() : destination;
 
         var source = await AnsiConsole
             .Status()
-            .StartAsync("Getting source meta...", _ => Data.Db.GetSourceMeta(builder));
+            .StartAsync("Getting source meta...", _ => Data.Db.GetAllObjectsAndTable(builder, true));
+
+        source = (settings.Type != null) ? source.Where(x => x.Type.Equals(settings.Type)).ToList() : source;
 
         var add = GetDiffItems(destination, source);
         var delete = GetDiffItems(source, destination);
         var changed = GetDiffDetail(source, destination);
 
-        TableMeta(add.ToList(), "[blue]Add items :plus:[/]", Color.Blue);
-        TableMeta(delete.ToList(), "[red]Removed items :minus:[/]", Color.Red);
-        TableMeta(changed.ToList(), "[yellow]Changed :minus:[/]", Color.Yellow);
+        TableMeta(add.ToList(), "[blue]:package: Add items[/]", Color.Blue);
+        TableMeta(delete.ToList(), "[red]:bomb: Remove items[/]", Color.Red);
+        TableMeta(changed.ToList(), "[yellow]:balance_scale: Changed items[/]", Color.Yellow);
 
         AnsiConsole.WriteLine();
         AnsiConsole.WriteLine();
@@ -76,7 +80,9 @@ public class DiffCommand : AsyncCommand<DiffCommand.Settings>
         {
             foreach (var l2 in list2)
             {
-                if (l1.Name.Equals(l2.Name) && l1.Definition != l2.Definition)
+                if (l1.Schema.Equals(l2.Schema) &&
+                    l1.Name.Equals(l2.Name) &&
+                    Generator.DefinitionCleanup(l1.Definition) != Generator.DefinitionCleanup(l2.Definition))
                 {
                     results.Add(l1);
                 }
@@ -100,10 +106,11 @@ public class DiffCommand : AsyncCommand<DiffCommand.Settings>
         table.Border(TableBorder.Rounded);
         table.AddColumn(title);
         table.AddColumn("Type");
+        table.AddColumn("Type Name");
         table.BorderColor(color);
         foreach (var row in meta)
         {
-            table.AddRow(row.Name, row.Type);
+            table.AddRow(row.Name, row.Type, row.TypeName);
         }
         AnsiConsole.Write(table);
     }

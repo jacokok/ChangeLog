@@ -5,34 +5,56 @@ namespace ChangeLog.Data;
 
 public static class Db
 {
-    private static string GetMetaQuery()
+    public static async Task<List<MetaDTO>> GetAllObjects(Builder builder, bool isSource)
     {
-        return @"
-                SELECT 
-                    ROUTINE_SCHEMA [Schema],
-                    SPECIFIC_NAME [Name],
-                    OBJECT_DEFINITION(o.[object_id]) [Definition],
-                    TRIM(o.type) [Type]
-                FROM SYS.OBJECTS (NOLOCK) o
-                JOIN INFORMATION_SCHEMA.ROUTINES (NOLOCK) r
-                    ON o.[name] = r.ROUTINE_NAME
-                WHERE o.type IN ('P', 'FN', 'IF', 'TF')
-                AND SPECIFIC_NAME NOT LIKE 'sp_MS%'
-                ORDER BY o.object_id
-            ";
-    }
-
-    public static async Task<List<MetaDTO>> GetMeta(Builder builder)
-    {
-        using var connection = builder.GetConnection();
-        var results = await connection.QueryAsync<MetaDTO>(GetMetaQuery());
+        using var connection = isSource ? builder.GetSourceConnection() : builder.GetConnection();
+        var results = await connection.QueryAsync<MetaDTO>(Queries.GetAllObjectsQuery());
         return results.ToList();
     }
 
-    public static async Task<List<MetaDTO>> GetSourceMeta(Builder builder)
+    public static async Task<List<MetaDTO>> GetMeta(Builder builder, bool isSource)
     {
-        using var connection = builder.GetSourceConnection();
-        var results = await connection.QueryAsync<MetaDTO>(GetMetaQuery());
+        using var connection = isSource ? builder.GetSourceConnection() : builder.GetConnection();
+        var results = await connection.QueryAsync<MetaDTO>(Queries.GetMetaQuery());
         return results.ToList();
+    }
+
+    public static async Task<List<ColumnsDTO>> GetColumns(Builder builder, bool isSource)
+    {
+        using var connection = isSource ? builder.GetSourceConnection() : builder.GetConnection();
+        var results = await connection.QueryAsync<ColumnsDTO>(Queries.GetColumnsQuery());
+        return results.ToList();
+    }
+
+    public static async Task<List<ColumnConstraintDTO>> GetConstraints(Builder builder, bool isSource)
+    {
+        using var connection = isSource ? builder.GetSourceConnection() : builder.GetConnection();
+        var results = await connection.QueryAsync<ColumnConstraintDTO>(Queries.GetConstrainsQuery());
+        return results.ToList();
+    }
+
+    public static async Task<List<ForeignKeysDTO>> GetForeignKeys(Builder builder, bool isSource)
+    {
+        using var connection = isSource ? builder.GetSourceConnection() : builder.GetConnection();
+        var results = await connection.QueryAsync<ForeignKeysDTO>(Queries.GetForeignKeyQuery());
+        return results.ToList();
+    }
+
+    public static async Task<List<IndexDTO>> GetIndexes(Builder builder, bool isSource)
+    {
+        using var connection = isSource ? builder.GetSourceConnection() : builder.GetConnection();
+        var results = await connection.QueryAsync<IndexDTO>(Queries.GetIndexesQuery());
+        return results.ToList();
+    }
+
+    public static async Task<List<MetaDTO>> GetAllObjectsAndTable(Builder builder, bool isSource)
+    {
+        using var connection = isSource ? builder.GetSourceConnection() : builder.GetConnection();
+        var results = await connection.QueryAsync<MetaDTO>(Queries.GetAllObjectsQuery());
+        var columns = await connection.QueryAsync<ColumnsDTO>(Queries.GetColumnsQuery());
+        var constraints = await connection.QueryAsync<ColumnConstraintDTO>(Queries.GetConstrainsQuery());
+        var foreignKeys = await connection.QueryAsync<ForeignKeysDTO>(Queries.GetForeignKeyQuery());
+        var indexes = await connection.QueryAsync<IndexDTO>(Queries.GetIndexesQuery());
+        return Generator.TableDefinition(results, columns, constraints, foreignKeys, indexes);
     }
 }
