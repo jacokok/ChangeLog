@@ -9,7 +9,7 @@ public static class Queries
                     o.object_id [ObjectId],
                     USER_NAME(o.schema_id) [Schema], 
                     o.name [Name], 
-                    OBJECT_DEFINITION(o.object_id) [Definition],
+                    TRIM(OBJECT_DEFINITION(o.object_id)) [Definition],
                     TRIM(o.type) [Type],
                     o.type_desc [TypeName]
                 FROM  
@@ -30,7 +30,7 @@ public static class Queries
                     o.object_id [ObjectId],
                     USER_NAME(o.schema_id) [Schema], 
                     o.name [Name], 
-                    OBJECT_DEFINITION(o.object_id) [Definition],
+                    TRIM(OBJECT_DEFINITION(o.object_id)) [Definition],
                     TRIM(o.type) [Type],
                     o.type_desc [TypeName]
                 FROM  
@@ -62,9 +62,9 @@ public static class Queries
                 c.max_length [MaxLength],
                 c.is_nullable IsNullable,
                 c.is_identity IsIdentity,
-                d.definition DefaultConstraint,
+                TRIM(d.definition) DefaultConstraint,
                 d.name DefaultConstraintName,
-                cc.definition ComputedDefinition
+                TRIM(cc.definition) ComputedDefinition
             FROM sys.objects (NOLOCK) o
                 JOIN sys.columns  (NOLOCK) c
                     ON c.object_id = o.object_id

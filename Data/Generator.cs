@@ -66,8 +66,9 @@ public static class Generator
             .ToList();
 
         StringBuilder sql = new();
-        sql.AppendFormat("CREATE TABLE {0}.{1}\r\n", o.Schema, o.Name);
-        sql.AppendFormat("(\r\n");
+        sql.AppendFormat("CREATE TABLE {0}.{1}", o.Schema, o.Name);
+        sql.AppendLine(string.Empty);
+        sql.AppendLine(string.Empty);
 
         List<string> rawColumnTypes = columns.ConvertAll(c => c.GetDefinitionType().ToUpper());
         int maxColumnName = columns.Max(c => c.ColumnName.Length);
@@ -83,16 +84,18 @@ public static class Generator
             if (!string.IsNullOrWhiteSpace(column.ComputedDefinition))
             {
                 sql.AppendFormat(
-                    "    {0} AS {1}{2}\r\n",
+                    "    {0} AS {1}{2}",
                     columnNames[c],
                     column.ComputedDefinition,
-                    c == columns.Count - 1 ? "" : ",");
+                    c == columns.Count - 1 ? "" : ","
+                );
+                sql.AppendLine(string.Empty);
             }
             else
             {
                 string colDef = column.GetDefinitionType();
                 sql.AppendFormat(
-                    "    {0} {1} {2}{3}{4}{5}{6}\r\n",
+                    "    {0} {1} {2}{3}{4}{5}{6}",
                     columnNames[c],
                     columnTypes[c],
                     column.IsNullable ? "    NULL" : "NOT NULL",
@@ -100,20 +103,25 @@ public static class Generator
                     column.IsPrimaryKey ? " PRIMARY KEY" : "",
                     column.IsIdentity ? " IDENTITY(1,1)" : "",
                     c == columns.Count - 1 ? "" : ",");
+                sql.AppendLine(string.Empty);
             }
         }
 
-        sql.AppendFormat(")\r\n");
+        sql.AppendLine(")");
 
         var newIndexes = Index.GetFromDTO(indexes);
 
         if (newIndexes.Count > 0)
         {
-            sql.Append("GO\r\n\r\n");
+            sql.AppendLine("GO");
+            sql.AppendLine(string.Empty);
 
             foreach (var index in newIndexes.OrderBy(c => c.IndexName))
             {
-                sql.AppendFormat("{0}\r\nGO\r\n", index.CreateSQL);
+                sql.Append(index.CreateSQL);
+                sql.AppendLine(string.Empty);
+                sql.Append("GO");
+                sql.AppendLine(string.Empty);
             }
         }
         return sql.ToString();
@@ -121,10 +129,10 @@ public static class Generator
 
     public static string DefinitionCleanup(string input)
     {
-        var result = input
-            .Replace(@"\r", string.Empty)
-            .Replace(@"\n", string.Empty)
-            .Replace(@"\t", string.Empty);
-        return result;
+        input = input.Replace(Environment.NewLine, string.Empty);
+        input = input.Replace("\n", string.Empty);
+        input = input.Replace("\r", string.Empty);
+        input = input.Replace("\t", string.Empty);
+        return input;
     }
 }

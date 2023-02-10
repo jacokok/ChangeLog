@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using ChangeLog.Classes;
 using ChangeLog.Data;
@@ -18,6 +19,7 @@ public class DiffCommand : AsyncCommand<DiffCommand.Settings>
         [CommandOption("-f|--file")]
         public string File { get; set; } = "changeLog.yml";
 
+        [Description("Only compare specific types. U = Table, V = View, P = Stored Procedure, FN = Function, IF = Inline Table Function, TF = Table Value Function")]
         [CommandOption("-t|--type")]
         public string? Type { get; set; }
     }
@@ -43,64 +45,82 @@ public class DiffCommand : AsyncCommand<DiffCommand.Settings>
 
         source = (settings.Type != null) ? source.Where(x => x.Type.Equals(settings.Type)).ToList() : source;
 
+        if (destination.Count == 0 && source.Count == 0)
+        {
+            AnsiConsole.Markup("[bold red]:red_exclamation_mark: No items found in source or destination[/] ");
+            return await Task.FromResult(0);
+        }
+
         var add = GetDiffItems(destination, source);
         var delete = GetDiffItems(source, destination);
-        var changed = GetDiffDetail(source, destination);
+        var diffTuple = GetDiffDetail(source, destination);
+        var changed = diffTuple.Item1;
+        var matched = diffTuple.Item2;
+
+        if (add.Count == 0 && delete.Count == 0 && changed.Count == 0)
+        {
+            AnsiConsole.Markup($"[bold green]:party_popper: Databases in sync.[/] ");
+            AnsiConsole.Markup($"[blue]Checked {destination.Count} items[/]");
+            return await Task.FromResult(1);
+        }
 
         TableMeta(add.ToList(), "[blue]:package: Add items[/]", Color.Blue);
         TableMeta(delete.ToList(), "[red]:bomb: Remove items[/]", Color.Red);
-        TableMeta(changed.ToList(), "[yellow]:balance_scale: Changed items[/]", Color.Yellow);
+        TableMeta(changed.ToList(), "[yellow]:pill: Changed items[/]", Color.Yellow);
 
         AnsiConsole.WriteLine();
+
+        var table = new Table();
+        table.Border(TableBorder.Rounded);
+        table.AddColumn("Name");
+        table.AddColumn("Value");
+        table.BorderColor(Color.Yellow);
+        table.AddRow("[mediumpurple3]:purple_circle: Destination[/]", $"[mediumpurple3]{destination.Count}[/]");
+        table.AddRow("[orange3]:orange_circle: Source[/]", $"[orange3]{source.Count}[/]");
+        table.AddRow("[blue]:package: Add[/]", $"[blue]{add.Count}[/]");
+        table.AddRow("[red]:bomb: Delete[/]", $"[red]{delete.Count}[/]");
+        table.AddRow("[yellow]:pill: Changed[/]", $"[yellow]{changed.Count}[/]");
+        table.AddRow("[green]:party_popper: Matched[/]", $"[green]{matched.Count}[/]");
+        AnsiConsole.Write(table);
+
         AnsiConsole.WriteLine();
-
-        AnsiConsole.Write(new BarChart()
-            .Width(60)
-            .Label("[green bold underline]Number of items[/]")
-            .CenterLabel()
-            .AddItem("Destination", destination.Count, Color.Blue)
-            .AddItem("Source", source.Count, Color.Green));
-
-        AnsiConsole.WriteLine();
-        AnsiConsole.WriteLine();
-
-        AnsiConsole.Write(new BreakdownChart()
-            .Width(60)
-            .AddItem("Add", add.Count, Color.Blue)
-            .AddItem("Delete", delete.Count, Color.Red)
-            .AddItem("Changed", changed.Count, Color.Yellow));
-
-        return await Task.FromResult(1);
+        AnsiConsole.Markup("[bold yellow]:squid: Found  mismatch in source and destination[/] ");
+        return await Task.FromResult(0);
     }
 
-    public static List<Data.MetaDTO> GetDiffDetail(List<Data.MetaDTO> list1, List<Data.MetaDTO> list2)
+    public static Tuple<List<MetaDTO>, List<MetaDTO>> GetDiffDetail(List<Data.MetaDTO> list1, List<Data.MetaDTO> list2)
     {
-        List<Data.MetaDTO> results = new();
+        List<MetaDTO> changed = new();
+        List<MetaDTO> matched = new();
         foreach (var l1 in list1)
         {
             foreach (var l2 in list2)
             {
-                if (l1.Schema.Equals(l2.Schema) &&
-                    l1.Name.Equals(l2.Name) &&
-                    Generator.DefinitionCleanup(l1.Definition) != Generator.DefinitionCleanup(l2.Definition))
+                if (l1.Schema.Equals(l2.Schema) && l1.Name.Equals(l2.Name))
                 {
-                    results.Add(l1);
+                    if (Generator.DefinitionCleanup(l1.Definition) != Generator.DefinitionCleanup(l2.Definition))
+                    {
+                        changed.Add(l1);
+                    }
+                    else
+                    {
+                        matched.Add(l1);
+                    }
                 }
             }
         }
-        return results;
+        return Tuple.Create(changed, matched);
     }
 
-    public static List<Data.MetaDTO> GetDiffItems(List<Data.MetaDTO> list1, List<Data.MetaDTO> list2)
+    public static List<MetaDTO> GetDiffItems(List<Data.MetaDTO> list1, List<Data.MetaDTO> list2)
     {
         var result = list1.Where(s => !list2.Any(d => d.Name == s.Name));
         return result.ToList();
     }
 
-    public static void TableMeta(List<Data.MetaDTO> meta, string title, Color color)
+    public static void TableMeta(List<MetaDTO> meta, string title, Color color)
     {
-        // AnsiConsole.Markup(title);
-        // AnsiConsole.WriteLine();
+        if (meta.Count == 0) return;
 
         var table = new Table();
         table.Border(TableBorder.Rounded);
