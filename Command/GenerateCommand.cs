@@ -1,5 +1,5 @@
+using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
-using System.Text;
 using ChangeLog.Classes;
 using ChangeLog.Liquibase;
 using ChangeLog.Liquibase.ChangeTypes;
@@ -13,33 +13,51 @@ public class GenerateCommand : AsyncCommand<GenerateCommand.Settings>
 {
     public class Settings : CommandSettings
     {
-        [CommandArgument(0, "[File]")]
+        [CommandOption("-s|--sourceConnectionString")]
+        public string SourceConnectionString { get; set; } = "";
+
+        [CommandOption("-f|--file")]
         public string File { get; set; } = "changeLog.yml";
-        [CommandArgument(1, "[Output]")]
-        public string Output { get; set; } = "./output";
+
+        [Description(Description.GenerateTypeDescription)]
+        [CommandOption("-t|--type")]
+        public string? Type { get; set; }
+        [CommandArgument(1, "[OutputFile]")]
+        public string Output { get; set; } = "./output.yml";
     }
 
     public override async Task<int> ExecuteAsync([NotNull] CommandContext context, [NotNull] Settings settings)
     {
-        Builder builder = new(settings.File);
-        var metaResults = await Data.Db.GetMeta(builder, false);
-        var meta = metaResults.Where(x => x.Type.Equals("P") && x.Definition.Length > 0).ToList();
-
-        AnsiConsole.MarkupLine($"Generating count: [green]{meta.Count}[/]");
-
-        string dir = Path.GetFullPath(settings.Output);
-        Directory.CreateDirectory(dir);
-
-        foreach (var m in meta)
+        var config = ConfigHelper.GetConfig(settings.File, null, settings.SourceConnectionString);
+        Builder builder = new(config);
+        if (!builder.Validate())
         {
-            string path = Path.GetFullPath(Path.Combine(dir, $"{m.Name}.yaml"));
+            return await Task.FromResult(0);
+        }
 
-            LiquibaseContainer changeLog = new()
+        var metaResults = await AnsiConsole
+            .Status()
+            .StartAsync("Getting target meta...", _ => Data.Db.GetMeta(builder, true));
+
+        metaResults = (settings.Type != null) ? metaResults.Where(x => x.Type.Equals(settings.Type)).ToList() : metaResults;
+
+        AnsiConsole.MarkupLine($"Generating count: [green]{metaResults.Count}[/]");
+
+        string path = Path.GetFullPath(settings.Output);
+        LiquibaseContainer changeLog = new()
+        {
+            DatabaseChangeLog = new()
+        };
+
+        foreach (var m in metaResults)
+        {
+            if (m.Type == "P")
             {
-                DatabaseChangeLog = new()
-                {
-                    new DatabaseChangeLog {
-                        ChangeSet = new () {
+                changeLog.DatabaseChangeLog.Add(
+                    new DatabaseChangeLog
+                    {
+                        ChangeSet = new()
+                        {
                             RunOnChange = true,
                             Author = Environment.UserName,
                             Id = m.Name,
@@ -50,18 +68,40 @@ public class GenerateCommand : AsyncCommand<GenerateCommand.Settings>
                                     CreateProcedure = new CreateProcedureType {
                                         SchemaName = m.Schema,
                                         ProcedureName = m.Name,
-                                        ProcedureBody = m.Definition,
+                                        ProcedureBody = m.Definition.Trim(),
                                         ReplaceIfExists = true
                                     }
                                 }
                             }
                         }
                     }
-                }
-            };
-            var yaml = Yaml.GetSerializer().Serialize(changeLog);
-            File.WriteAllText(path, yaml);
+                );
+            }
+            else if (m.Type == "FN")
+            {
+                changeLog.DatabaseChangeLog.Add(
+                    new DatabaseChangeLog
+                    {
+                        ChangeSet = new()
+                        {
+                            Author = Environment.UserName,
+                            Id = m.Name,
+                            Rollback = $"DROP FUNCTION {m.Schema}.{m.Name}",
+                            Changes = new() {
+                                new ChangeType
+                                {
+                                    Sql = new SqlType {
+                                        Sql = m.Definition.Trim()
+                                    }
+                                }
+                            }
+                        }
+                    }
+                );
+            }
         }
+        var yaml = Yaml.GetSerializer().Serialize(changeLog);
+        File.WriteAllText(path, yaml);
 
         return await Task.FromResult(1);
     }

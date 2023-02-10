@@ -2,6 +2,7 @@ using System.ComponentModel;
 using System.Diagnostics.CodeAnalysis;
 using ChangeLog.Classes;
 using ChangeLog.Data;
+using ChangeLog.Utils;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -19,7 +20,7 @@ public class DiffCommand : AsyncCommand<DiffCommand.Settings>
         [CommandOption("-f|--file")]
         public string File { get; set; } = "changeLog.yml";
 
-        [Description("Only compare specific types. U = Table, V = View, P = Stored Procedure, FN = Function, IF = Inline Table Function, TF = Table Value Function")]
+        [Description(Description.AllTypeDescription)]
         [CommandOption("-t|--type")]
         public string? Type { get; set; }
     }
@@ -33,34 +34,34 @@ public class DiffCommand : AsyncCommand<DiffCommand.Settings>
             return await Task.FromResult(0);
         }
 
-        var destination = await AnsiConsole
+        var target = await AnsiConsole
             .Status()
-            .StartAsync("Getting destination meta...", _ => Data.Db.GetAllObjectsAndTable(builder, false));
+            .StartAsync("Getting target meta...", _ => Db.GetAllObjectsAndTable(builder, false));
 
-        destination = (settings.Type != null) ? destination.Where(x => x.Type.Equals(settings.Type)).ToList() : destination;
+        target = (settings.Type != null) ? target.Where(x => x.Type.Equals(settings.Type)).ToList() : target;
 
         var source = await AnsiConsole
             .Status()
-            .StartAsync("Getting source meta...", _ => Data.Db.GetAllObjectsAndTable(builder, true));
+            .StartAsync("Getting source meta...", _ => Db.GetAllObjectsAndTable(builder, true));
 
         source = (settings.Type != null) ? source.Where(x => x.Type.Equals(settings.Type)).ToList() : source;
 
-        if (destination.Count == 0 && source.Count == 0)
+        if (target.Count == 0 && source.Count == 0)
         {
-            AnsiConsole.Markup("[bold red]:red_exclamation_mark: No items found in source or destination[/] ");
+            AnsiConsole.Markup("[bold red]:red_exclamation_mark: No items found in source or target[/] ");
             return await Task.FromResult(0);
         }
 
-        var add = GetDiffItems(destination, source);
-        var delete = GetDiffItems(source, destination);
-        var diffTuple = GetDiffDetail(source, destination);
+        var add = GetDiffItems(target, source);
+        var delete = GetDiffItems(source, target);
+        var diffTuple = GetDiffDetail(source, target);
         var changed = diffTuple.Item1;
         var matched = diffTuple.Item2;
 
         if (add.Count == 0 && delete.Count == 0 && changed.Count == 0)
         {
             AnsiConsole.Markup($"[bold green]:party_popper: Databases in sync.[/] ");
-            AnsiConsole.Markup($"[blue]Checked {destination.Count} items[/]");
+            AnsiConsole.Markup($"[blue]Checked {target.Count} items[/]");
             return await Task.FromResult(1);
         }
 
@@ -75,7 +76,7 @@ public class DiffCommand : AsyncCommand<DiffCommand.Settings>
         table.AddColumn("Name");
         table.AddColumn("Value");
         table.BorderColor(Color.Yellow);
-        table.AddRow("[mediumpurple3]:purple_circle: Destination[/]", $"[mediumpurple3]{destination.Count}[/]");
+        table.AddRow("[mediumpurple3]:purple_circle: Target[/]", $"[mediumpurple3]{target.Count}[/]");
         table.AddRow("[orange3]:orange_circle: Source[/]", $"[orange3]{source.Count}[/]");
         table.AddRow("[blue]:package: Add[/]", $"[blue]{add.Count}[/]");
         table.AddRow("[red]:bomb: Delete[/]", $"[red]{delete.Count}[/]");
@@ -84,7 +85,7 @@ public class DiffCommand : AsyncCommand<DiffCommand.Settings>
         AnsiConsole.Write(table);
 
         AnsiConsole.WriteLine();
-        AnsiConsole.Markup("[bold yellow]:squid: Found  mismatch in source and destination[/] ");
+        AnsiConsole.Markup("[bold yellow]:squid: Found  mismatch in source and target[/] ");
         return await Task.FromResult(0);
     }
 

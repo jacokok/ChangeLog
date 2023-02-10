@@ -17,7 +17,7 @@ public class ValidateYamlCommand : AsyncCommand<ValidateYamlCommand.Settings>
     {
         AnsiConsole.MarkupLine($"Validating file: [blue]{settings.File}[/]");
         Builder builder = new(settings.File);
-        builder.Validate();
+        builder.ValidateAll();
 
         // BuilderVerify verify = new(settings.File);
         // var builder = verify.ValidateYaml();

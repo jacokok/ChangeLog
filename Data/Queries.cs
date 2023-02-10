@@ -26,23 +26,33 @@ public static class Queries
     public static string GetAllObjectsQuery()
     {
         return @"
-                SELECT 
-                    o.object_id [ObjectId],
-                    USER_NAME(o.schema_id) [Schema], 
-                    o.name [Name], 
-                    TRIM(OBJECT_DEFINITION(o.object_id)) [Definition],
-                    TRIM(o.type) [Type],
-                    o.type_desc [TypeName]
-                FROM  
-                    SYS.OBJECTS (NOLOCK) o
-                    WHERE 
-                        o.is_ms_shipped = 0
-                        AND o.type IN ('U', 'V', 'P', 'FN', 'IF', 'TF')
-                        AND NOT (o.name = 'dtproperties' AND TRIM(o.type) = 'U') 
-                        AND NOT (o.name = 'sysdiagrams' AND TRIM(o.type) = 'U') 
-                        AND NOT (o.name LIKE 'fn_%' AND TRIM(o.type) = 'FN')
-                        AND NOT (o.name LIKE 'sp_%' AND TRIM(o.type) = 'P') 
-                ORDER BY o.type
+            SELECT 
+                o.object_id [ObjectId],
+                USER_NAME(o.schema_id) [Schema], 
+                o.name [Name], 
+                TRIM(OBJECT_DEFINITION(o.object_id)) [Definition],
+                TRIM(o.type) [Type],
+                o.type_desc [TypeName]
+            FROM  
+                sys.objects (NOLOCK) o
+                WHERE 
+                    o.is_ms_shipped = 0
+                    AND o.type IN ('U', 'V', 'P', 'FN', 'IF', 'TF', 'AF', 'FS')
+                    AND NOT (o.name = 'dtproperties' AND TRIM(o.type) = 'U') 
+                    AND NOT (o.name = 'sysdiagrams' AND TRIM(o.type) = 'U') 
+                    AND NOT (o.name LIKE 'fn_%' AND TRIM(o.type) = 'FN')
+                    AND NOT (o.name LIKE 'sp_%' AND TRIM(o.type) = 'P') 
+            UNION
+            SELECT 
+                user_type_id [ObjectId],
+                USER_NAME(schema_id) [Schema], 
+                name [Name], 
+                NULL [Definition],
+                'CT' [Type],
+                'Custom Types' [TypeName]
+            FROM sys.types (NOLOCK)
+            WHERE is_user_defined = 1
+            ORDER BY type
             ";
     }
 

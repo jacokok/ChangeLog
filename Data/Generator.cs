@@ -135,4 +135,5 @@ public static class Generator
         input = input.Replace("\t", string.Empty);
         return input;
     }
+
 }
