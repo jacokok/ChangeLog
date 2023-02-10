@@ -77,7 +77,7 @@ public class GenerateCommand : AsyncCommand<GenerateCommand.Settings>
                     }
                 );
             }
-            else if (m.Type == "FN")
+            else if (m.Type == "FN" || m.Type == "IF" || m.Type == "TF")
             {
                 changeLog.DatabaseChangeLog.Add(
                     new DatabaseChangeLog
