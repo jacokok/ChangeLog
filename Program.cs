@@ -27,6 +27,10 @@ app.Configure(config =>
         .WithDescription("Diff")
         .WithExample(new[] { "diff" });
 
+    config.AddCommand<SeedCommand>("seed")
+        .WithDescription("Seed")
+        .WithExample(new[] { "seed", "-t", "People" });
+
     config.AddCommand<TestCommand>("test")
         .WithDescription("Test")
         .WithExample(new[] { "test" });

@@ -99,13 +99,13 @@ public class DiffCommand : AsyncCommand<DiffCommand.Settings>
             {
                 if (l1.Schema.Equals(l2.Schema) && l1.Name.Equals(l2.Name))
                 {
-                    if (Generator.DefinitionCleanup(l1.Definition) != Generator.DefinitionCleanup(l2.Definition))
+                    if (Generator.IsMatch(l1, l2))
                     {
-                        changed.Add(l1);
+                        matched.Add(l1);
                     }
                     else
                     {
-                        matched.Add(l1);
+                        changed.Add(l1);
                     }
                 }
             }
@@ -113,7 +113,7 @@ public class DiffCommand : AsyncCommand<DiffCommand.Settings>
         return Tuple.Create(changed, matched);
     }
 
-    public static List<MetaDTO> GetDiffItems(List<Data.MetaDTO> list1, List<Data.MetaDTO> list2)
+    public static List<MetaDTO> GetDiffItems(List<MetaDTO> list1, List<MetaDTO> list2)
     {
         var result = list1.Where(s => !list2.Any(d => d.Name == s.Name));
         return result.ToList();

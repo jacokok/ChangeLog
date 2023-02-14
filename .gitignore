@@ -2,3 +2,4 @@ bin/
 obj/
 changeLog.yml
 output.yml
+seed.yml

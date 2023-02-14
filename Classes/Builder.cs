@@ -58,6 +58,15 @@ public class Builder
         return result.IsValid;
     }
 
+    public static bool ValidateCustom(FluentValidation.Results.ValidationResult validationResult)
+    {
+        foreach (var error in validationResult.Errors)
+        {
+            AnsiConsole.MarkupLine($"[red]{error.ErrorMessage}[/]");
+        }
+        return validationResult.IsValid;
+    }
+
     public IDbConnection GetConnection()
     {
         return new SqlConnection(_config.ConnectionString);

@@ -183,4 +183,17 @@ public static class Queries
             ORDER BY o.name, i.name, c.name
             ";
     }
+
+    public static string IsIdentityTableQuery()
+    {
+        return @"
+            SELECT TOP 1 cast(1 as bit) IsIdentity
+            FROM sys.objects (NOLOCK) o
+            JOIN sys.sys.columns (NOLOCK) c
+                ON o.object_id = c.object_id
+            WHERE o.name = 'Map'
+            AND o.type = 'U'
+            AND c.is_identity=1
+        ";
+    }
 }

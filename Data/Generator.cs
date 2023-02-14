@@ -133,7 +133,24 @@ public static class Generator
         input = input.Replace("\n", string.Empty);
         input = input.Replace("\r", string.Empty);
         input = input.Replace("\t", string.Empty);
+        input = input.Replace(" ", string.Empty);
         return input;
+    }
+
+    public static bool IsMatch(MetaDTO item1, MetaDTO item2)
+    {
+        if (item1.Type == "V")
+        {
+            int di1 = item1.Definition.IndexOf("AS", StringComparison.OrdinalIgnoreCase);
+            int i1 = di1 < 0 ? 0 : di1;
+            int di2 = item2.Definition.IndexOf("AS", StringComparison.OrdinalIgnoreCase);
+            int i2 = di2 < 0 ? 0 : di2;
+
+            string d1 = item1.Definition[i1..];
+            string d2 = item2.Definition[i2..];
+            return DefinitionCleanup(d1).Equals(d2, StringComparison.OrdinalIgnoreCase);
+        }
+        return DefinitionCleanup(item1.Definition).Equals(DefinitionCleanup(item2.Definition), StringComparison.OrdinalIgnoreCase);
     }
 
 }
