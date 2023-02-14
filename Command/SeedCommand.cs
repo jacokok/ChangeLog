@@ -53,17 +53,21 @@ public class SeedCommand : AsyncCommand<SeedCommand.Settings>
             return await Task.FromResult(0);
         }
 
-        var tableResults = await AnsiConsole
+        var dynamicDataProperty = await AnsiConsole
             .Status()
             .StartAsync("Getting table data...", _ => GetTableData(builder, settings.Table!, settings.Schema));
 
-        if (tableResults == null || tableResults.Count == 0)
+
+
+        if (dynamicDataProperty == null || dynamicDataProperty.TableData == null || dynamicDataProperty.TableData.Count == 0)
         {
             AnsiConsole.MarkupLine($"[red]No records found in table: {settings.Table}[/]");
             return await Task.FromResult(0);
         }
 
-        AnsiConsole.MarkupLine($"Generating data count: [green]{tableResults.Count}[/]");
+        bool tableHasIdentity = dynamicDataProperty.ObjectProperty?.TableHasIdentity ?? false;
+
+        AnsiConsole.MarkupLine($"Generating data count: [green]{dynamicDataProperty.TableData.Count}[/]");
 
         string path = Path.GetFullPath(settings.Output);
 
@@ -72,17 +76,20 @@ public class SeedCommand : AsyncCommand<SeedCommand.Settings>
             DatabaseChangeLog = new()
         };
         List<ChangeType> changes = new();
-        changes.Add(
-            new ChangeType
-            {
-                Sql = new SqlType
+        if (tableHasIdentity)
+        {
+            changes.Add(
+                new ChangeType
                 {
-                    Sql = "SET IDENTITY_INSERT NodeType ON;"
+                    Sql = new SqlType
+                    {
+                        Sql = "SET IDENTITY_INSERT NodeType ON;"
+                    }
                 }
-            }
-        );
+            );
+        }
 
-        foreach (var row in tableResults.ToArray())
+        foreach (var row in dynamicDataProperty.TableData.ToArray())
         {
             List<ColumnContainer> columns = new();
             foreach (var col in (IDictionary<string, object>)row)
@@ -106,15 +113,19 @@ public class SeedCommand : AsyncCommand<SeedCommand.Settings>
                 }
             });
         }
-        changes.Add(
-            new ChangeType
-            {
-                Sql = new SqlType
+
+        if (tableHasIdentity)
+        {
+            changes.Add(
+                new ChangeType
                 {
-                    Sql = "SET IDENTITY_INSERT NodeType ON;"
+                    Sql = new SqlType
+                    {
+                        Sql = "SET IDENTITY_INSERT NodeType ON;"
+                    }
                 }
-            }
-        );
+            );
+        }
 
         changeLog.DatabaseChangeLog.Add(
             new DatabaseChangeLog
@@ -122,8 +133,9 @@ public class SeedCommand : AsyncCommand<SeedCommand.Settings>
                 ChangeSet = new()
                 {
                     Author = Environment.UserName,
-                    Id = "Todo",
-                    Changes = changes
+                    Id = $"Seed{settings.Table}",
+                    Changes = changes,
+                    Rollback = $"DELETE FROM {settings.Schema}.{settings.Table}"
                 }
             }
         );
@@ -134,25 +146,28 @@ public class SeedCommand : AsyncCommand<SeedCommand.Settings>
         return await Task.FromResult(1);
     }
 
-    private static async Task<List<dynamic>> GetTableData(Builder builder, string table, string schema)
+    private static async Task<Data.DynamicDataProperty?> GetTableData(Builder builder, string table, string schema)
     {
         using var connection = builder.GetSourceConnection();
-        const string sql = @"
-            SELECT
+        const string sql = @"SELECT
                 OBJECTPROPERTY(OBJECT_ID(TABLE_NAME), 'IsTable') IsTable,
                 OBJECTPROPERTY(OBJECT_ID(TABLE_NAME), 'TableHasIdentity') TableHasIdentity
-            FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = @table AND TABLE_SCHEMA = @schema
-        ";
-        var objectPropertyResult = await connection.QuerySingleAsync<Data.ObjectProperty>(sql, new { table, schema });
+            FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = @table AND TABLE_SCHEMA = @schema";
+        var objectPropertyResult = await connection.QuerySingleOrDefaultAsync<Data.ObjectProperty>(sql, new { table, schema });
 
         if (objectPropertyResult?.IsTable == true)
         {
-            return (await connection.QueryAsync($"SELECT * FROM {schema}.{table}")).ToList();
+            var tableData = await connection.QueryAsync($"SELECT * FROM {schema}.{table}");
+            return new Data.DynamicDataProperty()
+            {
+                ObjectProperty = objectPropertyResult,
+                TableData = tableData.ToList()
+            };
         }
         else
         {
             AnsiConsole.MarkupLine($"[green]Could not find table: {schema}.{table}[/]");
         }
-        return new List<dynamic>();
+        return null;
     }
 }

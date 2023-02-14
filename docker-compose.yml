@@ -1,0 +1,22 @@
+version: "3.7"
+services:
+  mssql:
+    container_name: mssql
+    image: mcr.microsoft.com/mssql/server:2019-latest
+    ports:
+      - 1433:1433
+    environment:
+      ACCEPT_EULA: Y
+      MSSQL_SA_PASSWORD: Admin12345
+    volumes:
+      - mssql:/var/opt/mssql
+    networks:
+      - shared
+
+volumes:
+  mssql:
+
+networks:
+  shared:
+    name: shared
+    external: true
