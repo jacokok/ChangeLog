@@ -60,7 +60,7 @@ public class DiffCommand : AsyncCommand<DiffCommand.Settings>
 
         if (add.Count == 0 && delete.Count == 0 && changed.Count == 0)
         {
-            AnsiConsole.Markup($"[bold green]:party_popper: Databases in sync.[/] ");
+            AnsiConsole.Markup("[bold green]:party_popper: Databases in sync.[/] ");
             AnsiConsole.Markup($"[blue]Checked {target.Count} items[/]");
             return await Task.FromResult(1);
         }
