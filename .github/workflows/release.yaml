@@ -3,7 +3,6 @@ name: Publish
 on:
   release:
     types: [published]
-  workflow_dispatch:
 
 jobs:
   release:
@@ -19,11 +18,7 @@ jobs:
         run: dotnet restore
       - name: Build
         run: dotnet build --no-restore
-      # - name: Publish
-      #   run: dotnet publish ChangeLog.csproj -c Release -o folderName
-      # - name: Upload a Build Artifact
-      #   uses: actions/upload-artifact@v3
-      #   with:
-      #     name: folderName
-      #     path: ChangeLog/folderName/**
-      #     if-no-files-found: error
+      - name: Pack
+        run: dotnet pack -c Release -p:PackageVersion=${{github.event.release.tag_name}}
+      - name: Publish
+        run: dotnet nuget push ./bin/Release/Doink.ChangeLog.${{github.event.release.tag_name}}.nupkg -s https://api.nuget.org/v3/index.json -k ${{ secrets.NUGET_API_KEY }}
