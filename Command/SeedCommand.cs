@@ -71,6 +71,8 @@ public class SeedCommand : AsyncCommand<SeedCommand.Settings>
 
         string path = Path.GetFullPath(settings.Output);
 
+        string sTableName = $"{settings.Schema}.{settings.Table}";
+
         LiquibaseContainer changeLog = new()
         {
             DatabaseChangeLog = new()
@@ -83,7 +85,7 @@ public class SeedCommand : AsyncCommand<SeedCommand.Settings>
                 {
                     Sql = new SqlType
                     {
-                        Sql = "SET IDENTITY_INSERT NodeType ON;"
+                        Sql = $"SET IDENTITY_INSERT {sTableName} ON;"
                     }
                 }
             );
@@ -121,7 +123,7 @@ public class SeedCommand : AsyncCommand<SeedCommand.Settings>
                 {
                     Sql = new SqlType
                     {
-                        Sql = "SET IDENTITY_INSERT NodeType ON;"
+                        Sql = $"SET IDENTITY_INSERT {sTableName} OFF;"
                     }
                 }
             );
@@ -135,7 +137,7 @@ public class SeedCommand : AsyncCommand<SeedCommand.Settings>
                     Author = Environment.UserName,
                     Id = $"Seed{settings.Table}",
                     Changes = changes,
-                    Rollback = $"DELETE FROM {settings.Schema}.{settings.Table}"
+                    Rollback = $"DELETE FROM {sTableName}"
                 }
             }
         );
