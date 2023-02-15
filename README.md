@@ -4,12 +4,24 @@ Generate liquibase stored procedure changeLogs for mssql
 
 ![icon](icon.png)
 
-## Install
+## Installation
 
 Install directly from nuget.
 
 ```bash
 dotnet tool install --global Doink.ChangeLog
+```
+
+Update
+
+```bash
+dotnet tool update --global Doink.ChangeLog
+```
+
+Uninstall
+
+```bash
+dotnet tool uninstall --global Doink.ChangeLog
 ```
 
 ## How to use
