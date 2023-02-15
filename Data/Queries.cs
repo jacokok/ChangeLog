@@ -16,7 +16,7 @@ public static class Queries
                     SYS.OBJECTS (NOLOCK) o
                     WHERE 
                         o.is_ms_shipped = 0
-                        AND o.type IN ('P', 'FN', 'IF', 'TF')
+                        AND o.type IN ('P', 'FN', 'IF', 'TF', 'V')
                         AND NOT (o.name LIKE 'fn_%' AND TRIM(o.type) = 'FN')
                         AND NOT (o.name LIKE 'sp_%' AND TRIM(o.type) = 'P') 
                 ORDER BY o.object_id

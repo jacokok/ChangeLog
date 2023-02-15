@@ -77,6 +77,32 @@ public class GenerateCommand : AsyncCommand<GenerateCommand.Settings>
                     }
                 );
             }
+            if (m.Type == "V")
+            {
+                changeLog.DatabaseChangeLog.Add(
+                    new DatabaseChangeLog
+                    {
+                        ChangeSet = new()
+                        {
+                            Author = Environment.UserName,
+                            Id = m.Name,
+                            Rollback = $"DROP VIEW {m.Schema}.{m.Name}",
+                            Changes = new() {
+                                new ChangeType
+                                {
+                                    CreateView = new CreateViewType {
+                                        SchemaName = m.Schema,
+                                        ViewName = m.Name,
+                                        FullDefinition = true,
+                                        ReplaceIfExists = true,
+                                        SelectQuery = m.Definition
+                                    },
+                                }
+                            }
+                        }
+                    }
+                );
+            }
             else if (m.Type == "FN" || m.Type == "IF" || m.Type == "TF")
             {
                 changeLog.DatabaseChangeLog.Add(
