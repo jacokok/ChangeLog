@@ -32,7 +32,7 @@ public class GenerateCommand : AsyncCommand<GenerateCommand.Settings>
         Builder builder = new(config);
         if (!builder.Validate())
         {
-            return await Task.FromResult(0);
+            return await Task.FromResult(1);
         }
 
         var metaResults = await AnsiConsole
@@ -129,6 +129,6 @@ public class GenerateCommand : AsyncCommand<GenerateCommand.Settings>
         var yaml = Yaml.GetSerializer().Serialize(changeLog);
         File.WriteAllText(path, yaml);
 
-        return await Task.FromResult(1);
+        return await Task.FromResult(0);
     }
 }

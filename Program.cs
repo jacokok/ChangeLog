@@ -9,13 +9,13 @@ app.Configure(config =>
     config.PropagateExceptions();
 #endif
 
-    config.SetApplicationName("ChangeLog");
+    config.SetApplicationName("changelog");
 
     config.AddCommand<WelcomeCommand>("welcome").IsHidden();
 
     config.AddCommand<GenerateCommand>("generate")
         .WithAlias("gen")
-        .WithDescription("Generate changelog from changeLog.yml config file")
+        .WithDescription("Generate changelog for specified types")
         .WithExample(new[] { "generate", "-f", "changeLog.yml" });
 
     config.AddCommand<ValidateYamlCommand>("validate")
@@ -32,8 +32,13 @@ app.Configure(config =>
         .WithExample(new[] { "seed", "-t", "People" });
 
     config.AddCommand<TestCommand>("test")
+        .IsHidden()
         .WithDescription("Test")
         .WithExample(new[] { "test" });
+
+    config.AddCommand<InitCommand>("init")
+        .WithDescription("Create example changeLog.yml config file")
+        .WithExample(new[] { "init" });
 });
 
 app.Run(args);

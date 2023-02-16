@@ -1,6 +1,9 @@
 bin/
 obj/
 changeLog.yml
+changeLog.yaml
 output.yml
+output.yaml
+seed.yaml
 seed.yml
 temp/

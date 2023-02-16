@@ -14,7 +14,7 @@ public static class ConfigHelper
                 SourceConnectionString = sourceConnectionString ?? ""
             };
         }
-        else if (File.Exists(filePath))
+        else if (YamlExtensionFileExists(filePath))
         {
             string fileText = File.ReadAllText(filePath);
             return Yaml.GetDeserializer().Deserialize<Config>(fileText);
@@ -23,5 +23,31 @@ public static class ConfigHelper
         {
             return new Config();
         }
+    }
+
+    private static bool YamlExtensionFileExists(string filePath)
+    {
+        if (File.Exists(filePath))
+        {
+            return true;
+        }
+
+        string extension = Path.GetExtension(filePath);
+        string newExtension;
+        if (extension.Equals(".yaml", StringComparison.OrdinalIgnoreCase))
+        {
+            newExtension = ".yml";
+        }
+        else if (extension.Equals(".yml", StringComparison.OrdinalIgnoreCase))
+        {
+            newExtension = ".yaml";
+        }
+        else
+        {
+            newExtension = extension;
+        }
+
+        string newPath = Path.ChangeExtension(filePath, newExtension);
+        return File.Exists(newPath);
     }
 }

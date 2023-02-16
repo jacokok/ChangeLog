@@ -17,8 +17,7 @@ public class Builder
 
     public Builder(string filePath)
     {
-        string fileText = File.ReadAllText(filePath);
-        _config = Yaml.GetDeserializer().Deserialize<Config>(fileText);
+        _config = ConfigHelper.GetConfig(filePath, null, null);
     }
 
     public Builder(string connectionString, string sourceConnectionString)

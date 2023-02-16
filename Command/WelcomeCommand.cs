@@ -25,23 +25,18 @@ internal sealed class WelcomeCommand : Command<WelcomeCommand.Settings>
     public override int Execute([NotNull] CommandContext context, [NotNull] Settings settings)
     {
         AnsiConsole.Write(
-            new FigletText("Change Log")
-            .Centered()
+            new FigletText("changelog")
+            .LeftJustified()
             .Color(turquoise));
+
+        AnsiConsole.WriteLine();
 
         if (settings.Version)
         {
-            AnsiConsole.Write(
-                new FigletText(GetVersion())
-                .Centered()
-                .Color(turquoise));
-
             AnsiConsole.MarkupLine("version: " + GetVersion());
         }
         else
         {
-            // Use "dotnet ef [command] --help" for more information about a command.
-            AnsiConsole.MarkupLine("ChangeLog " + GetVersion());
             AnsiConsole.MarkupLine("Use [yellow]changelog -h[/] for more information");
         }
 

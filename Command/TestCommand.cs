@@ -79,7 +79,7 @@ public class TestCommand : AsyncCommand<TestCommand.Settings>
 
         var yaml = Yaml.GetSerializer().Serialize(container);
 
-        File.WriteAllText("./output.yaml", yaml);
+        File.WriteAllText("./output.yml", yaml);
         return await Task.FromResult(1);
     }
 }

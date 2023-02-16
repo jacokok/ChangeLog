@@ -45,12 +45,12 @@ public class SeedCommand : AsyncCommand<SeedCommand.Settings>
         Builder builder = new(config);
         if (!builder.Validate())
         {
-            return await Task.FromResult(0);
+            return await Task.FromResult(1);
         }
 
         if (!Builder.ValidateCustom(new SettingsValidator().Validate(settings)))
         {
-            return await Task.FromResult(0);
+            return await Task.FromResult(1);
         }
 
         var dynamicDataProperty = await AnsiConsole
@@ -145,7 +145,7 @@ public class SeedCommand : AsyncCommand<SeedCommand.Settings>
         var yaml = Yaml.GetSerializer().Serialize(changeLog);
         File.WriteAllText(path, yaml);
 
-        return await Task.FromResult(1);
+        return await Task.FromResult(0);
     }
 
     private static async Task<Data.DynamicDataProperty?> GetTableData(Builder builder, string table, string schema)

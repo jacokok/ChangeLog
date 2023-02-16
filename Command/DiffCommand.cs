@@ -31,7 +31,7 @@ public class DiffCommand : AsyncCommand<DiffCommand.Settings>
         Builder builder = new(config);
         if (!builder.Validate())
         {
-            return await Task.FromResult(0);
+            return await Task.FromResult(1);
         }
 
         var target = await AnsiConsole
@@ -62,7 +62,7 @@ public class DiffCommand : AsyncCommand<DiffCommand.Settings>
         {
             AnsiConsole.Markup("[bold green]:party_popper: Databases in sync.[/] ");
             AnsiConsole.Markup($"[blue]Checked {target.Count} items[/]");
-            return await Task.FromResult(1);
+            return await Task.FromResult(0);
         }
 
         TableMeta(add.ToList(), "[blue]:package: Add items[/]", Color.Blue);

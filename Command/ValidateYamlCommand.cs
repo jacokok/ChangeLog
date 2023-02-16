@@ -19,12 +19,6 @@ public class ValidateYamlCommand : AsyncCommand<ValidateYamlCommand.Settings>
         Builder builder = new(settings.File);
         builder.ValidateAll();
 
-        // BuilderVerify verify = new(settings.File);
-        // var builder = verify.ValidateYaml();
-        // if (BuilderVerify.ValidateBuilder(builder))
-        // {
-        //     return BuilderVerify.HasValidDbConnection(builder) ? 0 : 1;
-        // }
-        return await Task.FromResult(1);
+        return await Task.FromResult(0);
     }
 }
