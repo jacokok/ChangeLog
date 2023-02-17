@@ -86,7 +86,7 @@ public class GenerateCommand : AsyncCommand<GenerateCommand.Settings>
                         {
                             Author = Environment.UserName,
                             Id = m.Name,
-                            Rollback = $"DROP VIEW {m.Schema}.{m.Name}",
+                            // Rollback = $"DROP VIEW {m.Schema}.{m.Name}",
                             Changes = new() {
                                 new ChangeType
                                 {

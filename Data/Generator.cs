@@ -129,6 +129,7 @@ public static class Generator
 
     public static string DefinitionCleanup(string input)
     {
+        input = input.Trim();
         input = input.Replace(Environment.NewLine, string.Empty);
         input = input.Replace("\n", string.Empty);
         input = input.Replace("\r", string.Empty);
@@ -137,18 +138,27 @@ public static class Generator
         return input;
     }
 
+    public static string DefinitionCustomCleanup(string input)
+    {
+        input = input.Trim();
+        input = input.Replace(Environment.NewLine, " ");
+        return input;
+    }
+
     public static bool IsMatch(MetaDTO item1, MetaDTO item2)
     {
         if (item1.Type == "V")
         {
-            int di1 = item1.Definition.IndexOf("AS", StringComparison.OrdinalIgnoreCase);
+            string d1String = DefinitionCustomCleanup(item1.Definition);
+            string d2String = DefinitionCustomCleanup(item2.Definition);
+            int di1 = d1String.IndexOf(" AS ", StringComparison.OrdinalIgnoreCase);
             int i1 = di1 < 0 ? 0 : di1;
-            int di2 = item2.Definition.IndexOf("AS", StringComparison.OrdinalIgnoreCase);
+            int di2 = d2String.IndexOf(" AS ", StringComparison.OrdinalIgnoreCase);
             int i2 = di2 < 0 ? 0 : di2;
 
-            string d1 = item1.Definition[i1..];
-            string d2 = item2.Definition[i2..];
-            return DefinitionCleanup(d1).Equals(d2, StringComparison.OrdinalIgnoreCase);
+            string d1 = d1String[i1..];
+            string d2 = d2String[i2..];
+            return DefinitionCleanup(d1).Equals(DefinitionCleanup(d2), StringComparison.OrdinalIgnoreCase);
         }
         return DefinitionCleanup(item1.Definition).Equals(DefinitionCleanup(item2.Definition), StringComparison.OrdinalIgnoreCase);
     }
