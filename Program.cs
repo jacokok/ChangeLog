@@ -39,6 +39,11 @@ app.Configure(config =>
     config.AddCommand<InitCommand>("init")
         .WithDescription("Create example changeLog.yml config file")
         .WithExample(new[] { "init" });
+
+    config.AddCommand<UpdateCommand>("update")
+        .WithAlias("up")
+        .WithDescription("Updated stored procedures in folder from database")
+        .WithExample(new[] { "up" });
 });
 
 app.Run(args);
