@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using ChangeLog.Classes;
+using ChangeLog.Data;
 using ChangeLog.Liquibase;
 using ChangeLog.Liquibase.ChangeTypes;
 using ChangeLog.Utils;
@@ -20,6 +21,9 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
 
         [CommandArgument(1, "[Output]")]
         public string Output { get; set; } = "./procs";
+
+        [CommandOption("-d|--dry-run")]
+        public bool DryRun { get; set; }
     }
 
     public override async Task<int> ExecuteAsync([NotNull] CommandContext context, [NotNull] Settings settings)
@@ -36,6 +40,11 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
             .StartAsync("Getting target meta...", _ => Data.Db.GetMeta(builder, true));
         var meta = metaResults.Where(x => x.Type.Equals("P") && x.Definition.Length > 0).ToList();
 
+        if (settings.DryRun)
+        {
+            AnsiConsole.MarkupLine("[purple]Dry run: will not make any changes to files[/]");
+        }
+
         AnsiConsole.MarkupLine($"Found [green]{meta.Count}[/] stored procedures in database");
         ProcResults results = Procs.GetProcsFromFiles(settings.Output);
         AnsiConsole.MarkupLine($"Found [green]{results.Procs.Count}[/] stored procedures in procs folder");
@@ -45,6 +54,7 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
 
         int added = 0;
         int updated = 0;
+        int matched = 0;
         int deleted = 0;
 
         var metaDictionary = meta.ToDictionary(x => $"{x.Schema}.{x.Name}", x => x);
@@ -54,51 +64,108 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
             if (!metaDictionary.ContainsKey(d.Key))
             {
                 deleted++;
+                if (!settings.DryRun)
+                {
+                    var dbChangeLog = d.Value.DatabaseChangeLog?.FirstOrDefault();
+                    var changes = dbChangeLog?.ChangeSet?.Changes?.FirstOrDefault();
+                    string? pName = changes?.CreateProcedure?.ProcedureName;
+                    string? pSchema = changes?.CreateProcedure?.SchemaName;
+
+                    if (pName != null)
+                    {
+                        LiquibaseContainer deleteChangeLog = new()
+                        {
+                            DatabaseChangeLog = new()
+                            {
+                                new DatabaseChangeLog {
+                                    ChangeSet = new () {
+                                        Author = Environment.UserName,
+                                        Id = $"Drop{pSchema}{pName}",
+                                        Changes = new() {
+                                            new ChangeType
+                                            {
+                                                DropProcedure = new DropProcedureType {
+                                                    SchemaName = pSchema,
+                                                    ProcedureName = pName
+                                                },
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        };
+                        string deletedDir = Path.GetFullPath(Path.Combine(dir, "deleted"));
+                        Directory.CreateDirectory(deletedDir);
+                        string deletedPath = Path.GetFullPath(Path.Combine(deletedDir, $"{pSchema}.{pName}.yml"));
+                        var yaml = Yaml.GetSerializer().Serialize(deleteChangeLog);
+                        File.WriteAllText(deletedPath, yaml);
+
+                        string oldFilePath = Path.GetFullPath(Path.Combine(dir, $"{pSchema}.{pName}.yml"));
+                        File.Delete(oldFilePath);
+                    }
+                }
             }
         }
 
         foreach (var m in meta)
         {
+            bool isMatch = false;
+            string fileDefinition;
             if (results.Procs.ContainsKey($"{m.Schema}.{m.Name}"))
             {
-                updated++;
+                var fileDbChangeLog = results.Procs.FirstOrDefault(x => x.Key.Equals($"{m.Schema}.{m.Name}", StringComparison.Ordinal));
+                var dbChangeLog = fileDbChangeLog.Value.DatabaseChangeLog?.FirstOrDefault();
+                var change = dbChangeLog?.ChangeSet?.Changes?.FirstOrDefault();
+                fileDefinition = change?.CreateProcedure?.ProcedureBody ?? "";
+                isMatch = Generator.DefinitionCleanup(fileDefinition) == Generator.DefinitionCleanup(m.Definition);
+                if (isMatch)
+                {
+                    matched++;
+                }
+                else
+                {
+                    updated++;
+                }
             }
             else
             {
                 added++;
             }
 
-            LiquibaseContainer changeLog = new()
+            if (!isMatch && !settings.DryRun)
             {
-                DatabaseChangeLog = new()
+                LiquibaseContainer changeLog = new()
                 {
-                    new DatabaseChangeLog {
-                        ChangeSet = new () {
-                            RunOnChange = true,
-                            Author = Environment.UserName,
-                            Id = m.Name,
-                            Rollback = "empty",
-                            Changes = new() {
-                                new ChangeType
-                                {
-                                    CreateProcedure = new CreateProcedureType {
-                                        SchemaName = m.Schema,
-                                        ProcedureName = m.Name,
-                                        ProcedureBody = m.Definition,
-                                        ReplaceIfExists = true
+                    DatabaseChangeLog = new()
+                    {
+                        new DatabaseChangeLog {
+                            ChangeSet = new () {
+                                RunOnChange = true,
+                                Author = Environment.UserName,
+                                Id = m.Name,
+                                Rollback = "empty",
+                                Changes = new() {
+                                    new ChangeType
+                                    {
+                                        CreateProcedure = new CreateProcedureType {
+                                            SchemaName = m.Schema,
+                                            ProcedureName = m.Name,
+                                            ProcedureBody = m.Definition,
+                                            ReplaceIfExists = true
+                                        }
                                     }
                                 }
                             }
                         }
                     }
-                }
-            };
-
-            // string path = Path.GetFullPath(Path.Combine(dir, $"{m.Schema}.{m.Name}.yml"));
-            // var yaml = Yaml.GetSerializer().Serialize(changeLog);
-            // File.WriteAllText(path, yaml);
+                };
+                string path = Path.GetFullPath(Path.Combine(dir, $"{m.Schema}.{m.Name}.yml"));
+                var yaml = Yaml.GetSerializer().Serialize(changeLog);
+                File.WriteAllText(path, yaml);
+            }
         }
 
+        AnsiConsole.MarkupLine($"[blue] Matched: {matched}[/]");
         AnsiConsole.MarkupLine($"[yellow] Updating: {updated}[/]");
         AnsiConsole.MarkupLine($"[green] Added: {added}[/]");
         AnsiConsole.MarkupLine($"[red] Deleted: {deleted}[/]");
