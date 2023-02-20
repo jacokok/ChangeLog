@@ -37,7 +37,7 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
 
         var metaResults = await AnsiConsole
             .Status()
-            .StartAsync("Getting target meta...", _ => Data.Db.GetMeta(builder, true));
+            .StartAsync("Getting target meta...", _ => Db.GetMeta(builder, true));
         var meta = metaResults.Where(x => x.Type.Equals("P") && x.Definition.Length > 0).ToList();
 
         if (settings.DryRun)
@@ -70,6 +70,7 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
                     var changes = dbChangeLog?.ChangeSet?.Changes?.FirstOrDefault();
                     string? pName = changes?.CreateProcedure?.ProcedureName;
                     string? pSchema = changes?.CreateProcedure?.SchemaName;
+                    string pBody = changes?.CreateProcedure?.ProcedureBody ?? string.Empty;
 
                     if (pName != null)
                     {
@@ -84,10 +85,16 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
                                         Changes = new() {
                                             new ChangeType
                                             {
+                                                CreateProcedure = new CreateProcedureType {
+                                                    SchemaName = pSchema,
+                                                    ReplaceIfExists = true,
+                                                    ProcedureName = pName,
+                                                    ProcedureBody = pBody
+                                                },
                                                 DropProcedure = new DropProcedureType {
                                                     SchemaName = pSchema,
                                                     ProcedureName = pName
-                                                },
+                                                }
                                             }
                                         }
                                     }
