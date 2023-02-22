@@ -26,9 +26,13 @@ public class DiffCommand : AsyncCommand<DiffCommand.Settings>
         [CommandOption("-t|--type")]
         public string? Type { get; set; }
 
-        [Description("Name of object to compare")]
-        [CommandOption("-n|--Name")]
+        [Description("Name of object to filter on")]
+        [CommandOption("-n|--name")]
         public string? Name { get; set; }
+
+        [Description("Show detailed comparison results")]
+        [CommandOption("-d|--detail")]
+        public bool Detail { get; set; }
     }
 
     public override async Task<int> ExecuteAsync([NotNull] CommandContext context, [NotNull] Settings settings)
@@ -67,11 +71,9 @@ public class DiffCommand : AsyncCommand<DiffCommand.Settings>
 
         var add = GetDiffItems(target, source);
         var delete = GetDiffItems(source, target);
-        var diffTuple = GetDiffDetail(source, target);
-        var changed = diffTuple.Item1;
-        var matched = diffTuple.Item2;
+        var diff = GetDiffDetail(source, target);
 
-        if (add.Count == 0 && delete.Count == 0 && changed.Count == 0)
+        if (add.Count == 0 && delete.Count == 0 && diff.Changed.Count == 0)
         {
             AnsiConsole.Markup("[bold green]:party_popper: Databases in sync.[/] ");
             AnsiConsole.Markup($"[blue]Checked {target.Count} items[/]");
@@ -80,7 +82,7 @@ public class DiffCommand : AsyncCommand<DiffCommand.Settings>
 
         TableMeta(add.ToList(), "[blue]:package: Add items[/]", Color.Blue);
         TableMeta(delete.ToList(), "[red]:bomb: Remove items[/]", Color.Red);
-        TableMeta(changed.ToList(), "[yellow]:pill: Changed items[/]", Color.Yellow);
+        TableMeta(diff.Changed, "[yellow]:pill: Changed items[/]", Color.Yellow);
 
         AnsiConsole.WriteLine();
 
@@ -93,42 +95,49 @@ public class DiffCommand : AsyncCommand<DiffCommand.Settings>
         table.AddRow("[orange3]:orange_circle: Source[/]", $"[orange3]{source.Count}[/]");
         table.AddRow("[blue]:package: Add[/]", $"[blue]{add.Count}[/]");
         table.AddRow("[red]:bomb: Delete[/]", $"[red]{delete.Count}[/]");
-        table.AddRow("[yellow]:pill: Changed[/]", $"[yellow]{changed.Count}[/]");
-        table.AddRow("[green]:party_popper: Matched[/]", $"[green]{matched.Count}[/]");
+        table.AddRow("[yellow]:pill: Changed[/]", $"[yellow]{diff.Changed.Count}[/]");
+        table.AddRow("[green]:party_popper: Matched[/]", $"[green]{diff.Matched.Count}[/]");
         AnsiConsole.Write(table);
 
         AnsiConsole.WriteLine();
         AnsiConsole.Markup("[bold yellow]:squid: Found  mismatch in source and target[/] ");
 
-        if (settings.Name?.Length > 0)
+        if (settings.Detail)
         {
             AnsiConsole.WriteLine();
-            var targetDef = target?.FirstOrDefault()?.Definition ?? string.Empty;
-            var sourceDef = source?.FirstOrDefault()?.Definition ?? string.Empty;
-            var diff = InlineDiffBuilder.Diff(targetDef, sourceDef);
-            foreach (var line in diff.Lines)
+            foreach (var item in diff.Changed)
             {
-                switch (line.Type)
+                var rule = new Rule($"{item.Schema}.{item.Name}");
+                rule.LeftJustified();
+                rule.RuleStyle("teal dim");
+                AnsiConsole.WriteLine();
+                AnsiConsole.Write(rule);
+                AnsiConsole.WriteLine();
+
+                var diffResults = InlineDiffBuilder.Diff(item.Definition.Trim(), item.Definition2.Trim());
+                foreach (var line in diffResults.Lines)
                 {
-                    case ChangeType.Inserted:
-                        AnsiConsole.MarkupLineInterpolated($"[green]+ {line.Text}[/]");
-                        break;
-                    case ChangeType.Deleted:
-                        AnsiConsole.MarkupLineInterpolated($"[red]- {line.Text}[/]");
-                        break;
-                    default:
-                        AnsiConsole.MarkupLineInterpolated($"[gray]  {line.Text}[/]");
-                        break;
+                    switch (line.Type)
+                    {
+                        case ChangeType.Inserted:
+                            AnsiConsole.MarkupLineInterpolated($"[green]+ {line.Text}[/]");
+                            break;
+                        case ChangeType.Deleted:
+                            AnsiConsole.MarkupLineInterpolated($"[red]- {line.Text}[/]");
+                            break;
+                        default:
+                            AnsiConsole.MarkupLineInterpolated($"[gray]  {line.Text}[/]");
+                            break;
+                    }
                 }
             }
         }
         return await Task.FromResult(0);
     }
 
-    public static Tuple<List<MetaDTO>, List<MetaDTO>> GetDiffDetail(List<Data.MetaDTO> list1, List<Data.MetaDTO> list2)
+    public static DiffMetaDTO GetDiffDetail(List<MetaDTO> list1, List<MetaDTO> list2)
     {
-        List<MetaDTO> changed = new();
-        List<MetaDTO> matched = new();
+        DiffMetaDTO diff = new();
         foreach (var l1 in list1)
         {
             foreach (var l2 in list2)
@@ -137,16 +146,25 @@ public class DiffCommand : AsyncCommand<DiffCommand.Settings>
                 {
                     if (Generator.IsMatch(l1, l2))
                     {
-                        matched.Add(l1);
+                        diff.Matched.Add(l1);
                     }
                     else
                     {
-                        changed.Add(l1);
+                        diff.Changed.Add(new ChangedDTO
+                        {
+                            Name = l1.Name,
+                            ObjectId = l1.ObjectId,
+                            Schema = l1.Schema,
+                            Type = l1.Type,
+                            TypeName = l1.TypeName,
+                            Definition = l1.Definition,
+                            Definition2 = l2.Definition
+                        });
                     }
                 }
             }
         }
-        return Tuple.Create(changed, matched);
+        return diff;
     }
 
     public static List<MetaDTO> GetDiffItems(List<MetaDTO> list1, List<MetaDTO> list2)
@@ -170,5 +188,20 @@ public class DiffCommand : AsyncCommand<DiffCommand.Settings>
             table.AddRow(row.Name, row.Type, row.TypeName);
         }
         AnsiConsole.Write(table);
+    }
+
+    public static void TableMeta(List<ChangedDTO> meta, string title, Color color)
+    {
+        if (meta.Count == 0) return;
+        var newMeta = meta.ConvertAll(a => new MetaDTO()
+        {
+            Name = a.Name,
+            Definition = a.Definition,
+            ObjectId = a.ObjectId,
+            Schema = a.Schema,
+            Type = a.Type,
+            TypeName = a.TypeName
+        });
+        TableMeta(newMeta, title, color);
     }
 }
