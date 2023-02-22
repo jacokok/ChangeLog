@@ -3,6 +3,8 @@ using System.Diagnostics.CodeAnalysis;
 using ChangeLog.Classes;
 using ChangeLog.Data;
 using ChangeLog.Utils;
+using DiffPlex.DiffBuilder;
+using DiffPlex.DiffBuilder.Model;
 using Spectre.Console;
 using Spectre.Console.Cli;
 
@@ -23,6 +25,10 @@ public class DiffCommand : AsyncCommand<DiffCommand.Settings>
         [Description(Description.AllTypeDescription)]
         [CommandOption("-t|--type")]
         public string? Type { get; set; }
+
+        [Description("Name of object to compare")]
+        [CommandOption("-n|--Name")]
+        public string? Name { get; set; }
     }
 
     public override async Task<int> ExecuteAsync([NotNull] CommandContext context, [NotNull] Settings settings)
@@ -50,6 +56,13 @@ public class DiffCommand : AsyncCommand<DiffCommand.Settings>
         {
             AnsiConsole.Markup("[bold red]:red_exclamation_mark: No items found in source or target[/] ");
             return await Task.FromResult(0);
+        }
+
+        if (settings.Name?.Length > 0)
+        {
+            target = target.Where(x => x.Name.Equals(settings.Name ?? "")).ToList();
+            source = source.Where(x => x.Name.Equals(settings.Name ?? "")).ToList();
+            AnsiConsole.MarkupLine($"[bold red]:red_exclamation_mark: Filtering on {settings.Name} [/] ");
         }
 
         var add = GetDiffItems(target, source);
@@ -86,6 +99,29 @@ public class DiffCommand : AsyncCommand<DiffCommand.Settings>
 
         AnsiConsole.WriteLine();
         AnsiConsole.Markup("[bold yellow]:squid: Found  mismatch in source and target[/] ");
+
+        if (settings.Name?.Length > 0)
+        {
+            AnsiConsole.WriteLine();
+            var targetDef = target?.FirstOrDefault()?.Definition ?? string.Empty;
+            var sourceDef = source?.FirstOrDefault()?.Definition ?? string.Empty;
+            var diff = InlineDiffBuilder.Diff(targetDef, sourceDef);
+            foreach (var line in diff.Lines)
+            {
+                switch (line.Type)
+                {
+                    case ChangeType.Inserted:
+                        AnsiConsole.MarkupLineInterpolated($"[green]+ {line.Text}[/]");
+                        break;
+                    case ChangeType.Deleted:
+                        AnsiConsole.MarkupLineInterpolated($"[red]- {line.Text}[/]");
+                        break;
+                    default:
+                        AnsiConsole.MarkupLineInterpolated($"[gray]  {line.Text}[/]");
+                        break;
+                }
+            }
+        }
         return await Task.FromResult(0);
     }
 
