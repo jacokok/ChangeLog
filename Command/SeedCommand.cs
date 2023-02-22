@@ -22,10 +22,10 @@ public class SeedCommand : AsyncCommand<SeedCommand.Settings>
         public string File { get; set; } = "changeLog.yml";
 
         [Description("Table Name to get seed data from")]
-        [CommandOption("-t|--table")]
+        [CommandOption("-n|--name")]
         public string? Table { get; set; }
         [Description("Schema")]
-        [CommandOption("-d|--schema")]
+        [CommandOption("-h|--schema")]
         public string Schema { get; set; } = "dbo";
         [CommandArgument(1, "[OutputFile]")]
         public string Output { get; set; } = "./seed.yml";
@@ -56,8 +56,6 @@ public class SeedCommand : AsyncCommand<SeedCommand.Settings>
         var dynamicDataProperty = await AnsiConsole
             .Status()
             .StartAsync("Getting table data...", _ => GetTableData(builder, settings.Table!, settings.Schema));
-
-
 
         if (dynamicDataProperty == null || dynamicDataProperty.TableData == null || dynamicDataProperty.TableData.Count == 0)
         {
