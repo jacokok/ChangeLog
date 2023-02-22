@@ -22,6 +22,11 @@ public class GenerateCommand : AsyncCommand<GenerateCommand.Settings>
         [Description(Description.GenerateTypeDescription)]
         [CommandOption("-t|--type")]
         public string? Type { get; set; }
+
+        [Description("Name of object to filter on")]
+        [CommandOption("-n|--name")]
+        public string? Name { get; set; }
+
         [CommandArgument(1, "[OutputFile]")]
         public string Output { get; set; } = "./output.yml";
     }
@@ -40,6 +45,12 @@ public class GenerateCommand : AsyncCommand<GenerateCommand.Settings>
             .StartAsync("Getting target meta...", _ => Data.Db.GetMeta(builder, true));
 
         metaResults = (settings.Type != null) ? metaResults.Where(x => x.Type.Equals(settings.Type)).ToList() : metaResults;
+
+        if (settings.Name?.Length > 0)
+        {
+            metaResults = metaResults.Where(x => x.Name.Equals(settings.Name ?? "")).ToList();
+            AnsiConsole.MarkupLine($"[bold red]:red_exclamation_mark: Filtering on {settings.Name} [/] ");
+        }
 
         AnsiConsole.MarkupLine($"Generating count: [green]{metaResults.Count}[/]");
 
