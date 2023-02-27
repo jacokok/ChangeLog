@@ -1,4 +1,5 @@
 using System.Text;
+using System.Text.RegularExpressions;
 
 namespace ChangeLog.Data;
 
@@ -130,37 +131,24 @@ public static class Generator
     public static string DefinitionCleanup(string input)
     {
         input = input.Trim();
-        input = input.Replace(Environment.NewLine, string.Empty);
-        input = input.Replace("\n", string.Empty);
-        input = input.Replace("\r", string.Empty);
-        input = input.Replace("\t", string.Empty);
-        input = input.Replace(" ", string.Empty);
-        return input;
+        return Regex.Replace(input, @"[\s]", string.Empty);
     }
 
-    public static string DefinitionCustomCleanup(string input)
+    public static string DefinitionCustomCleanup(string input, string schema, string name)
     {
         input = input.Trim();
-        input = input.Replace(Environment.NewLine, " ");
-        return input;
+        Match match = Regex.Match(input, @"((?i)\bcreate|alter\b)+[\s]+((?i)\bprocedure|proc|view|table|function\b)+[\s]+([^\s]+)");
+        if (match.Groups.Count > 3)
+        {
+            input = input.Remove(match.Groups[3].Index, match.Groups[3].Length).Insert(match.Groups[3].Index, $"[{schema}].[{name}]");
+        }
+        return Regex.Replace(input, @"[\s]", " ");
     }
 
     public static bool IsMatch(MetaDTO item1, MetaDTO item2)
     {
-        if (item1.Type == "V")
-        {
-            string d1String = DefinitionCustomCleanup(item1.Definition);
-            string d2String = DefinitionCustomCleanup(item2.Definition);
-            int di1 = d1String.IndexOf(" AS ", StringComparison.OrdinalIgnoreCase);
-            int i1 = di1 < 0 ? 0 : di1;
-            int di2 = d2String.IndexOf(" AS ", StringComparison.OrdinalIgnoreCase);
-            int i2 = di2 < 0 ? 0 : di2;
-
-            string d1 = d1String[i1..];
-            string d2 = d2String[i2..];
-            return DefinitionCleanup(d1).Equals(DefinitionCleanup(d2), StringComparison.OrdinalIgnoreCase);
-        }
-        return DefinitionCleanup(item1.Definition).Equals(DefinitionCleanup(item2.Definition), StringComparison.OrdinalIgnoreCase);
+        string def1 = DefinitionCustomCleanup(item1.Definition, item1.Schema, item1.Name);
+        string def2 = DefinitionCustomCleanup(item2.Definition, item2.Schema, item2.Name);
+        return DefinitionCleanup(def1).Equals(DefinitionCleanup(def2), StringComparison.OrdinalIgnoreCase);
     }
-
 }

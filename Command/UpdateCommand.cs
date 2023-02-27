@@ -124,7 +124,7 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
                 var dbChangeLog = fileDbChangeLog.Value.DatabaseChangeLog?.FirstOrDefault();
                 var change = dbChangeLog?.ChangeSet?.Changes?.FirstOrDefault();
                 fileDefinition = change?.CreateProcedure?.ProcedureBody ?? "";
-                isMatch = Generator.DefinitionCleanup(fileDefinition) == Generator.DefinitionCleanup(m.Definition);
+                isMatch = Generator.DefinitionCleanup(Generator.DefinitionCustomCleanup(fileDefinition, m.Schema, m.Name)) == Generator.DefinitionCleanup(Generator.DefinitionCustomCleanup(m.Definition, m.Schema, m.Name));
                 if (isMatch)
                 {
                     matched++;
