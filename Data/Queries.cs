@@ -9,16 +9,16 @@ public static class Queries
                     o.object_id [ObjectId],
                     USER_NAME(o.schema_id) [Schema], 
                     o.name [Name], 
-                    TRIM(OBJECT_DEFINITION(o.object_id)) [Definition],
-                    TRIM(o.type) [Type],
+                    LTRIM(RTRIM(OBJECT_DEFINITION(o.object_id))) [Definition],
+                    LTRIM(RTRIM(o.type)) [Type],
                     o.type_desc [TypeName]
                 FROM  
                     SYS.OBJECTS (NOLOCK) o
                     WHERE 
                         o.is_ms_shipped = 0
                         AND o.type IN ('P', 'FN', 'IF', 'TF', 'V')
-                        AND NOT (o.name LIKE 'fn_%' AND TRIM(o.type) = 'FN')
-                        AND NOT (o.name LIKE 'sp_%' AND TRIM(o.type) = 'P') 
+                        AND NOT (o.name LIKE 'fn_%' AND LTRIM(RTRIM(o.type)) = 'FN')
+                        AND NOT (o.name LIKE 'sp_%' AND LTRIM(RTRIM(o.type)) = 'P') 
                 ORDER BY o.object_id
             ";
     }
@@ -30,18 +30,18 @@ public static class Queries
                 o.object_id [ObjectId],
                 USER_NAME(o.schema_id) [Schema], 
                 o.name [Name], 
-                TRIM(OBJECT_DEFINITION(o.object_id)) [Definition],
-                TRIM(o.type) [Type],
+                LTRIM(RTRIM(OBJECT_DEFINITION(o.object_id))) [Definition],
+                LTRIM(RTRIM(o.type)) [Type],
                 o.type_desc [TypeName]
             FROM  
                 sys.objects (NOLOCK) o
                 WHERE 
                     o.is_ms_shipped = 0
                     AND o.type IN ('U', 'V', 'P', 'FN', 'IF', 'TF', 'AF', 'FS')
-                    AND NOT (o.name = 'dtproperties' AND TRIM(o.type) = 'U') 
-                    AND NOT (o.name = 'sysdiagrams' AND TRIM(o.type) = 'U') 
-                    AND NOT (o.name LIKE 'fn_%' AND TRIM(o.type) = 'FN')
-                    AND NOT (o.name LIKE 'sp_%' AND TRIM(o.type) = 'P') 
+                    AND NOT (o.name = 'dtproperties' AND LTRIM(RTRIM(o.type)) = 'U') 
+                    AND NOT (o.name = 'sysdiagrams' AND LTRIM(RTRIM(o.type)) = 'U') 
+                    AND NOT (o.name LIKE 'fn_%' AND LTRIM(RTRIM(o.type)) = 'FN')
+                    AND NOT (o.name LIKE 'sp_%' AND LTRIM(RTRIM(o.type)) = 'P') 
             UNION
             SELECT 
                 user_type_id [ObjectId],
@@ -72,9 +72,9 @@ public static class Queries
                 c.max_length [MaxLength],
                 c.is_nullable IsNullable,
                 c.is_identity IsIdentity,
-                TRIM(d.definition) DefaultConstraint,
+                LTRIM(RTRIM(d.definition)) DefaultConstraint,
                 d.name DefaultConstraintName,
-                TRIM(cc.definition) ComputedDefinition
+                LTRIM(RTRIM(cc.definition)) ComputedDefinition
             FROM sys.objects (NOLOCK) o
                 JOIN sys.columns  (NOLOCK) c
                     ON c.object_id = o.object_id
