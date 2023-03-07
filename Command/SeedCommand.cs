@@ -153,11 +153,11 @@ public class SeedCommand : AsyncCommand<SeedCommand.Settings>
                 OBJECTPROPERTY(OBJECT_ID(TABLE_NAME), 'IsTable') IsTable,
                 OBJECTPROPERTY(OBJECT_ID(TABLE_NAME), 'TableHasIdentity') TableHasIdentity
             FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_NAME = @table AND TABLE_SCHEMA = @schema";
-        var objectPropertyResult = await connection.QuerySingleOrDefaultAsync<Data.ObjectProperty>(sql, new { table, schema });
+        var objectPropertyResult = await connection.QuerySingleOrDefaultAsync<Data.ObjectProperty>(sql, new { table, schema }, commandTimeout: 300);
 
         if (objectPropertyResult?.IsTable == true)
         {
-            var tableData = await connection.QueryAsync($"SELECT * FROM {schema}.{table}");
+            var tableData = await connection.QueryAsync($"SELECT * FROM {schema}.{table}", commandTimeout: 300);
             return new Data.DynamicDataProperty()
             {
                 ObjectProperty = objectPropertyResult,
