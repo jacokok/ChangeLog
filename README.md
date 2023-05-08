@@ -1,8 +1,20 @@
 # ChangeLog
 
-Generate liquibase stored procedure changeLogs for mssql
+Generate liquibase changeLogs for mssql
 
 ![icon](icon.png)
+
+## Features
+
+- Generate liquibase stored procedure changelogs in folder
+- Generate seed changelogs from existing tables
+- Generate changelog of specific db objects
+- Show diff between databases
+
+## Limitations and Notes
+
+- This is build for Microsoft SQL Server only for now.
+- Not focusing on features like creating changelogs for tables that liquibase is already able to do.
 
 ## Installation
 
