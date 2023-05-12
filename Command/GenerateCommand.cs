@@ -79,7 +79,7 @@ public class GenerateCommand : AsyncCommand<GenerateCommand.Settings>
                                     CreateProcedure = new CreateProcedureType {
                                         SchemaName = m.Schema,
                                         ProcedureName = m.Name,
-                                        ProcedureBody = m.Definition.Trim(),
+                                        ProcedureText = m.Definition.Trim(),
                                         ReplaceIfExists = true
                                     }
                                 }

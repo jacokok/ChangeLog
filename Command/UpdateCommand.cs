@@ -70,7 +70,7 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
                     var changes = dbChangeLog?.ChangeSet?.Changes?.FirstOrDefault();
                     string? pName = changes?.CreateProcedure?.ProcedureName;
                     string? pSchema = changes?.CreateProcedure?.SchemaName;
-                    string pBody = changes?.CreateProcedure?.ProcedureBody ?? string.Empty;
+                    string pText = changes?.CreateProcedure?.ProcedureText ?? string.Empty;
 
                     if (pName != null)
                     {
@@ -89,7 +89,7 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
                                                     SchemaName = pSchema,
                                                     ReplaceIfExists = true,
                                                     ProcedureName = pName,
-                                                    ProcedureBody = pBody
+                                                    ProcedureText = pText
                                                 },
                                                 DropProcedure = new DropProcedureType {
                                                     SchemaName = pSchema,
@@ -123,7 +123,7 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
                 var fileDbChangeLog = results.Procs.FirstOrDefault(x => x.Key.Equals($"{m.Schema}.{m.Name}", StringComparison.Ordinal));
                 var dbChangeLog = fileDbChangeLog.Value.DatabaseChangeLog?.FirstOrDefault();
                 var change = dbChangeLog?.ChangeSet?.Changes?.FirstOrDefault();
-                fileDefinition = change?.CreateProcedure?.ProcedureBody ?? "";
+                fileDefinition = change?.CreateProcedure?.ProcedureText ?? "";
                 isMatch = Generator.DefinitionCleanup(Generator.DefinitionCustomCleanup(fileDefinition, m.Schema, m.Name)) == Generator.DefinitionCleanup(Generator.DefinitionCustomCleanup(m.Definition, m.Schema, m.Name));
                 if (isMatch)
                 {
@@ -157,7 +157,7 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
                                         CreateProcedure = new CreateProcedureType {
                                             SchemaName = m.Schema,
                                             ProcedureName = m.Name,
-                                            ProcedureBody = m.Definition,
+                                            ProcedureText = m.Definition,
                                             ReplaceIfExists = true
                                         }
                                     }

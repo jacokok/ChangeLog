@@ -42,7 +42,7 @@ public class TestCommand : AsyncCommand<TestCommand.Settings>
                 CreateProcedure = new CreateProcedureType
                 {
                     ProcedureName = "test",
-                    ProcedureBody = "test",
+                    ProcedureText = "test",
                     ReplaceIfExists = true
                 }
             }
