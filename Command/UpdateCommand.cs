@@ -96,7 +96,8 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
                                                     ProcedureName = pName
                                                 }
                                             }
-                                        }
+                                        },
+                                        Rollback = pText
                                     }
                                 }
                             }
