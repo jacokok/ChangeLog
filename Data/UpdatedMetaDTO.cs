@@ -17,3 +17,10 @@ public enum ActionType
     Match,
     Delete
 }
+
+public class Counts
+{
+    public int Add { get; set; }
+    public int Update { get; set; }
+    public int Delete { get; set; }
+}

@@ -62,11 +62,8 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
             Directory.CreateDirectory(dir);
         }
 
-        int added = 0;
-        int updated = 0;
         int matched = 0;
-        int deleted = 0;
-        var resultList = new List<UpdatedMetaDTO>();
+        List<UpdatedMetaDTO> resultList = new();
 
         var metaDictionary = meta.ToDictionary(x => $"{x.Schema}.{x.Name}", x => x);
 
@@ -74,7 +71,6 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
         {
             if (!metaDictionary.ContainsKey(d.Key))
             {
-                deleted++;
                 resultList.Add(new UpdatedMetaDTO
                 {
                     Key = d.Key,
@@ -107,7 +103,6 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
                 }
                 else
                 {
-                    updated++;
                     resultList.Add(new UpdatedMetaDTO
                     {
                         Key = $"{m.Schema}.{m.Name}",
@@ -118,7 +113,6 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
             }
             else
             {
-                added++;
                 resultList.Add(new UpdatedMetaDTO
                 {
                     Key = $"{m.Schema}.{m.Name}",
@@ -130,62 +124,64 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
 
         if (settings.Interactive)
         {
-            var pickedItems = AnsiConsole.Prompt(
-                new MultiSelectionPrompt<string>()
-                    .Title("Pick [green]items[/]?")
-                    .NotRequired()
-                    .PageSize(10)
-                    .MoreChoicesText("[grey](Move up and down to reveal more items)[/]")
-                    .InstructionsText(
-                        "[grey](Press [blue]<space>[/] to toggle item, " +
-                        "[green]<enter>[/] to accept)[/]")
-                    .AddChoices(PickItems(resultList))
-                );
-            resultList = FilterPickedItems(pickedItems, resultList);
+            if (resultList.Any(x => x.ActionType != ActionType.Match))
+            {
+                var pickedItems = AnsiConsole.Prompt(
+                    new MultiSelectionPrompt<string>()
+                        .Title("Pick [green]items[/]?")
+                        .NotRequired()
+                        .PageSize(10)
+                        .MoreChoicesText("[grey](Move up and down to reveal more items)[/]")
+                        .InstructionsText(
+                            "[grey](Press [blue]<space>[/] to toggle item, " +
+                            "[green]<enter>[/] to accept)[/]")
+                        .AddChoiceGroup("[green]Add[/]", resultList.Where(x => x.ActionType.Equals(ActionType.Add))?.Select(m => m.Key).ToArray() ?? Array.Empty<string>())
+                        .AddChoiceGroup("[yellow]Update[/]", resultList.Where(x => x.ActionType.Equals(ActionType.Update))?.Select(m => m.Key).ToArray() ?? Array.Empty<string>())
+                        .AddChoiceGroup("[red]Delete[/]", resultList.Where(x => x.ActionType.Equals(ActionType.Delete))?.Select(m => m.Key).ToArray() ?? Array.Empty<string>())
+                    );
+                resultList = FilterPickedItems(pickedItems, resultList);
+            }
         }
+        var counts = GetCounts(resultList);
 
         if (!settings.DryRun)
         {
             UpdateItems(resultList, dir);
-
             AnsiConsole.MarkupLine($"[blue] Matched: {matched}[/]");
-            AnsiConsole.MarkupLine($"[yellow] Updated: {updated}[/]");
-            AnsiConsole.MarkupLine($"[green] Added: {added}[/]");
-            AnsiConsole.MarkupLine($"[red] Deleted: {deleted}[/]");
+            AnsiConsole.MarkupLine($"[yellow] Updated: {counts.Update}[/]");
+            AnsiConsole.MarkupLine($"[green] Added: {counts.Add}[/]");
+            AnsiConsole.MarkupLine($"[red] Deleted: {counts.Delete}[/]");
         }
         else
         {
             AnsiConsole.MarkupLine($"[blue] Matched: {matched}[/]");
-            AnsiConsole.MarkupLine($"[yellow] To update: {updated}[/]");
-            AnsiConsole.MarkupLine($"[green] To add: {added}[/]");
-            AnsiConsole.MarkupLine($"[red] To delete: {deleted}[/]");
+            AnsiConsole.MarkupLine($"[yellow] To update: {counts.Update}[/]");
+            AnsiConsole.MarkupLine($"[green] To add: {counts.Add}[/]");
+            AnsiConsole.MarkupLine($"[red] To delete: {counts.Delete}[/]");
         }
 
         return await Task.FromResult(0);
     }
 
-    private static string[] PickItems(List<UpdatedMetaDTO>? resultList)
-    {
-        var add = resultList?
-                    .Where(x => x.ActionType.Equals(ActionType.Add))?
-                    .Select(m => $"[grey]Add[/] [green]{m.Key}[/]")
-                    .ToArray();
-        var update = resultList?
-                    .Where(x => x.ActionType.Equals(ActionType.Update))?
-                    .Select(m => $"Update [yellow]{m.Key}[/]")
-                    .ToArray();
-        var delete = resultList?
-                .Where(x => x.ActionType.Equals(ActionType.Delete))?
-                .Select(m => $"Delete [red]{m.Key}[/]")
-                .ToArray();
-
-        var result = add?.Union(update ?? Array.Empty<string>()).Union(delete ?? Array.Empty<string>()).ToArray();
-        return result ?? Array.Empty<string>();
-    }
-
     private static List<UpdatedMetaDTO> FilterPickedItems(List<string> pickedItems, List<UpdatedMetaDTO> resultList)
     {
+        foreach (var item in pickedItems)
+        {
+            AnsiConsole.MarkupLine($"[red] Item: {item}[/]");
+        }
+        foreach (var item in resultList.Where(x => x.ActionType == ActionType.Add).ToList())
+        {
+            AnsiConsole.MarkupLine($"[red] Item: {item.Key}[/]");
+        }
         return resultList.Where(x => pickedItems.Contains(x.Key)).ToList();
+    }
+
+    private static Counts GetCounts(List<UpdatedMetaDTO> resultList)
+    {
+        var add = resultList.Count(x => x.ActionType == ActionType.Add);
+        var update = resultList.Count(x => x.ActionType == ActionType.Update);
+        var delete = resultList.Count(x => x.ActionType == ActionType.Delete);
+        return new Counts { Add = add, Update = update, Delete = delete };
     }
 
     private static void UpdateItems(List<UpdatedMetaDTO> resultList, string dir)
