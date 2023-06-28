@@ -1,3 +1,4 @@
 {
-  "cSpell.words": ["Liquibase", "OBJECTPROPERTY"]
+  "cSpell.words": ["Liquibase", "OBJECTPROPERTY"],
+  "dotnet.defaultSolution": "ChangeLog.sln"
 }
