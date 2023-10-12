@@ -278,8 +278,8 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
                 var yaml = Yaml.GetSerializer().Serialize(deleteChangeLog);
                 File.WriteAllText(deletedPath, yaml);
 
-                // string oldFilePath = Path.GetFullPath(Path.Combine(dir, $"{pSchema}.{pName}.yml"));
-                // File.Delete(oldFilePath);
+                string oldFilePath = Path.GetFullPath(Path.Combine(dir, $"{pSchema}.{pName}.yml"));
+                File.Delete(oldFilePath);
             }
         }
     }
