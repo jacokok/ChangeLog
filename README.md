@@ -67,4 +67,7 @@ changelog generate -n storedProcedureName
 
 # Update stored procedures changeSets in folder from database. -d option will make no changes
 changelog update -d
+
+# New interactive mode added to select only items you want to change
+changelog update -i
 ```
