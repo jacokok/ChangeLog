@@ -252,19 +252,22 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
                                         Changes = new() {
                                             new ChangeType
                                             {
-                                                CreateProcedure = new CreateProcedureType {
-                                                    SchemaName = pSchema,
-                                                    ReplaceIfExists = true,
-                                                    ProcedureName = pName,
-                                                    ProcedureText = pText
-                                                },
                                                 DropProcedure = new DropProcedureType {
                                                     SchemaName = pSchema,
                                                     ProcedureName = pName
                                                 }
                                             }
                                         },
-                                        Rollback = pText
+                                        Rollback = pText,
+                                        PreConditions = new List<PreCondition> () {
+                                            new PreCondition () {
+                                                OnFail = "MARK_RAN",
+                                                SqlCheck = new () {
+                                                    ExpectedResult = "1",
+                                                    Sql = $"SELECT COUNT(OBJECT_ID('{pSchema}.{pName}', 'P'))"
+                                                }
+                                            }
+                                        }
                                     }
                                 }
                             }
@@ -275,8 +278,8 @@ public class UpdateCommand : AsyncCommand<UpdateCommand.Settings>
                 var yaml = Yaml.GetSerializer().Serialize(deleteChangeLog);
                 File.WriteAllText(deletedPath, yaml);
 
-                string oldFilePath = Path.GetFullPath(Path.Combine(dir, $"{pSchema}.{pName}.yml"));
-                File.Delete(oldFilePath);
+                // string oldFilePath = Path.GetFullPath(Path.Combine(dir, $"{pSchema}.{pName}.yml"));
+                // File.Delete(oldFilePath);
             }
         }
     }
